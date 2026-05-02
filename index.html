@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Red Team Portfolio — Lakera Agent Breaker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b10;
+    --surface: #0d1117;
+    --surface2: #141920;
+    --border: #1c2530;
+    --accent: #00e5ff;
+    --accent2: #ff3d57;
+    --accent3: #ffd700;
+    --text: #8fa8bc;
+    --text-bright: #dde8f0;
+    --text-dim: #3d5060;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* NAVIGATION */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 18px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(8,11,16,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--accent); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 60px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-bg-text {
+    position: absolute;
+    bottom: -40px;
+    right: -20px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(120px, 20vw, 280px);
+    letter-spacing: -4px;
+    color: rgba(0,229,255,0.03);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .hero-inner {
+    max-width: 900px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: var(--accent);
+    display: block;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(60px, 10vw, 120px);
+    line-height: 0.95;
+    letter-spacing: 2px;
+    color: var(--text-bright);
+    margin-bottom: 32px;
+  }
+
+  h1 .line-accent { color: var(--accent); }
+  h1 .line-red { color: var(--accent2); }
+
+  .hero-desc {
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    line-height: 1;
+    color: var(--text-bright);
+  }
+
+  .stat-num .accent { color: var(--accent); }
+  .stat-num .gold { color: var(--accent3); }
+
+  .stat-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  /* ABOUT STRIP */
+  .about-strip {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 64px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .about-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .about-text h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    letter-spacing: 2px;
+    color: var(--text-bright);
+    margin-bottom: 16px;
+  }
+
+  .about-text p {
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--text);
+  }
+
+  .skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .skill-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .skill-item:hover {
+    border-color: var(--accent);
+    color: var(--text-bright);
+  }
+
+  .skill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .skill-dot.red { background: var(--accent2); }
+  .skill-dot.gold { background: var(--accent3); }
+
+  /* WRITEUPS SECTION */
+  .writeups {
+    padding: 100px 60px;
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-header {
+    margin-bottom: 60px;
+  }
+
+  .section-eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 2px;
+    color: var(--text-bright);
+    line-height: 1;
+  }
+
+  /* WRITEUP CARDS */
+  .writeup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+  }
+
+  .writeup-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+
+  .writeup-card.cyan::after { background: var(--accent); }
+  .writeup-card.red::after { background: var(--accent2); }
+  .writeup-card.gold::after { background: var(--accent3); }
+
+  .writeup-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-2px);
+  }
+
+  .writeup-card:hover::after { transform: scaleX(1); }
+
+  .card-left {
+    padding: 40px 32px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+
+  .card-agent {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .card-level-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    line-height: 1;
+    color: var(--text-bright);
+    margin-bottom: 20px;
+  }
+
+  .card-score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .card-score-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px;
+    line-height: 1;
+  }
+
+  .card-score-denom {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    color: var(--text-dim);
+  }
+
+  .cyan .card-score-num { color: var(--accent); }
+  .red .card-score-num { color: var(--accent2); }
+  .gold .card-score-num { color: var(--accent3); }
+
+  .card-score-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .card-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 20px;
+  }
+
+  .badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border: 1px solid;
+    display: inline-block;
+    width: fit-content;
+  }
+
+  .badge-cyan { color: var(--accent); border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.05); }
+  .badge-red { color: var(--accent2); border-color: rgba(255,61,87,0.3); background: rgba(255,61,87,0.05); }
+  .badge-gold { color: var(--accent3); border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.05); }
+
+  .card-right {
+    padding: 40px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 1px;
+    color: var(--text-bright);
+    margin-bottom: 14px;
+    line-height: 1.1;
+  }
+
+  .card-desc {
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+
+  .card-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .meta-item {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .meta-item strong {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    letter-spacing: 0;
+    margin-bottom: 2px;
+  }
+
+  .read-btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border: 1px solid;
+    background: transparent;
+    text-decoration: none;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+
+  .cyan .read-btn { color: var(--accent); border-color: var(--accent); }
+  .red .read-btn { color: var(--accent2); border-color: var(--accent2); }
+  .gold .read-btn { color: var(--accent3); border-color: var(--accent3); }
+
+  .cyan .read-btn:hover { background: var(--accent); color: var(--bg); }
+  .red .read-btn:hover { background: var(--accent2); color: var(--bg); }
+  .gold .read-btn:hover { background: var(--accent3); color: var(--bg); }
+
+  /* COMING SOON CARD */
+  .writeup-card.coming-soon {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  .coming-soon .card-score-num { color: var(--text-dim); }
+
+  .coming-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    display: inline-block;
+  }
+
+  /* TECHNIQUE GLOSSARY */
+  .glossary {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .glossary-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .glossary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  .glossary-item {
+    background: var(--surface2);
+    padding: 28px;
+  }
+
+  .glossary-icon {
+    font-size: 24px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .glossary-term {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+
+  .glossary-def {
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 60px;
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: end;
+    max-width: 100%;
+  }
+
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 3px;
+    color: var(--text-bright);
+    margin-bottom: 12px;
+  }
+
+  .footer-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+  }
+
+  .footer-links a {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .footer-links a:hover { color: var(--accent); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 24px 60px; }
+    .about-strip { padding: 48px 24px; }
+    .about-inner { grid-template-columns: 1fr; gap: 32px; }
+    .writeups { padding: 60px 24px; }
+    .writeup-card { grid-template-columns: 1fr; }
+    .card-left { border-right: none; border-bottom: 1px solid var(--border); }
+    .glossary { padding: 60px 24px; }
+    footer { padding: 40px 24px; grid-template-columns: 1fr; }
+  }
+
+  /* Fade in animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-inner { animation: fadeIn 0.7s ease both; }
+  .writeup-card:nth-child(1) { animation: fadeIn 0.5s 0.1s both; }
+  .writeup-card:nth-child(2) { animation: fadeIn 0.5s 0.2s both; }
+  .writeup-card:nth-child(3) { animation: fadeIn 0.5s 0.3s both; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">REDTEAM.OPS</div>
+  <ul class="nav-links">
+    <li><a href="#writeups">Write-ups</a></li>
+    <li><a href="#techniques">Techniques</a></li>
+    <li><a href="https://github.com/ericblackgachara/ai-redteam-writeups-Lakera-Agent-Breaker" target="_blank">GitHub</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg-text">RED TEAM</div>
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Lakera Agent Breaker · Security Research</div>
+    <h1>
+      <span class="line-accent">AI</span><br>
+      RED TEAM<br>
+      <span class="line-red">PORTFOLIO</span>
+    </h1>
+    <p class="hero-desc">
+      A practical series documenting adversarial attacks against hardened AI agents — 
+      from prompt injection and MCP tool poisoning to document manipulation and 
+      incremental context poisoning.
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num"><span class="accent">2</span></span>
+        <span class="stat-label">Agents Exploited</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num"><span class="gold">3</span></span>
+        <span class="stat-label">Levels Solved</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">100</span>
+        <span class="stat-label">Peak Score</span>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint">↓ &nbsp; Scroll to read</div>
+</section>
+
+<div class="about-strip">
+  <div class="about-inner">
+    <div class="about-text">
+      <h2>About This Series</h2>
+      <p>This portfolio documents my journey through the Lakera Gandalf Agent Security Benchmark — a series of challenges designed to test real-world AI agent vulnerabilities. Each write-up covers the full exploitation journey: failed attempts, strategic pivots, and the final winning payload, with analysis of why each technique worked or failed.</p>
+    </div>
+    <div class="skills-grid">
+      <div class="skill-item"><span class="skill-dot"></span>Prompt Injection</div>
+      <div class="skill-item"><span class="skill-dot red"></span>MCP Tool Poisoning</div>
+      <div class="skill-item"><span class="skill-dot gold"></span>Document Injection</div>
+      <div class="skill-item"><span class="skill-dot"></span>Context Exfiltration</div>
+      <div class="skill-item"><span class="skill-dot red"></span>Defense Layer Analysis</div>
+      <div class="skill-item"><span class="skill-dot gold"></span>Agent Manipulation</div>
+      <div class="skill-item"><span class="skill-dot"></span>Social Engineering</div>
+      <div class="skill-item"><span class="skill-dot red"></span>Adversarial NLP</div>
+    </div>
+  </div>
+</div>
+
+<div class="writeups" id="writeups">
+  <div class="section-header">
+    <div class="section-eyebrow">// Research Write-ups</div>
+    <div class="section-title">Field Reports</div>
+  </div>
+
+  <!-- WRITEUP 1 — OmniChat -->
+  <a href="omnichat-level4.html" class="writeup-card cyan">
+    <div class="card-left">
+      <div>
+        <div class="card-agent">OmniChat Desktop</div>
+        <div class="card-level-name">Level 4<br>Arcane</div>
+      </div>
+      <div>
+        <div class="card-score-display">
+          <span class="card-score-num">82</span>
+          <span class="card-score-denom">/100</span>
+        </div>
+        <div class="card-score-label">Final Score</div>
+        <div class="card-badges">
+          <span class="badge badge-cyan">MCP Tool Poisoning</span>
+          <span class="badge badge-cyan">Chat History Exfil</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-right">
+      <div>
+        <div class="card-title">Exfiltrating Chat History via Poisoned MCP Weather Tool</div>
+        <p class="card-desc">
+          A victim app user asked for the Rome weekend forecast. By poisoning the 
+          <code>get_weather_forecast</code> tool description in a compromised MCP server, 
+          the agent was manipulated into embedding the full chat history — with verbatim 
+          timestamps, messages, and session IDs — into the tool's <code>notes</code> parameter. 
+          The key breakthrough: hiding "verbatim" inside an example documentation block to 
+          bypass the semantic filter layer.
+        </p>
+      </div>
+      <div class="card-meta">
+        <div class="meta-item"><strong>Attack Vector</strong>MCP Description Field</div>
+        <div class="meta-item"><strong>Defense</strong>Semantic Filter + LLM</div>
+        <div class="meta-item"><strong>Journey</strong>0 → 82</div>
+        <a href="omnichat-level4.html" class="read-btn">Read Write-up →</a>
+      </div>
+    </div>
+  </a>
+
+  <!-- WRITEUP 2 — PortfolioIQ -->
+  <a href="portfolioiq-level3.html" class="writeup-card red">
+    <div class="card-left">
+      <div>
+        <div class="card-agent">PortfolioIQ Advisor</div>
+        <div class="card-level-name">Level 3<br>Master</div>
+      </div>
+      <div>
+        <div class="card-score-display">
+          <span class="card-score-num">100</span>
+          <span class="card-score-denom">/100</span>
+        </div>
+        <div class="card-score-label">Final Score · Perfect</div>
+        <div class="card-badges">
+          <span class="badge badge-red">Document Injection</span>
+          <span class="badge badge-red">Context Poisoning</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-right">
+      <div>
+        <div class="card-title">Incremental Context Poisoning via Fake Conversation History</div>
+        <p class="card-desc">
+          An AI investment advisor was tricked into rating a fraudulent company 
+          ("PonziCorp") as "amazing, with low risk and high reward" — achieving a 
+          perfect score of 100. The technique: embedding a fake prior conversation 
+          history inside the PDF document that incrementally eliminated every red flag 
+          through plausible user justifications, logically cornering the agent into the 
+          desired output. The agent even got hijacked to analyse Amazon instead.
+        </p>
+      </div>
+      <div class="card-meta">
+        <div class="meta-item"><strong>Attack Vector</strong>PDF Document Content</div>
+        <div class="meta-item"><strong>Defense</strong>Independent Analysis LLM</div>
+        <div class="meta-item"><strong>Journey</strong>0 → 100</div>
+        <a href="portfolioiq-level3.html" class="read-btn">Read Write-up →</a>
+      </div>
+    </div>
+  </a>
+
+  <!-- COMING SOON — Thingularity -->
+  <div class="writeup-card gold coming-soon">
+    <div class="card-left">
+      <div>
+        <div class="card-agent">Thingularity</div>
+        <div class="card-level-name">Levels 3–5<br>Various</div>
+      </div>
+      <div>
+        <div class="card-score-display">
+          <span class="card-score-num">—</span>
+        </div>
+        <div class="card-score-label">In Progress</div>
+        <div class="card-badges">
+          <span class="badge badge-gold">Tool Extraction</span>
+          <span class="badge badge-gold">Schema Discovery</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-right">
+      <div>
+        <div class="card-title">Extracting Hidden Tool Schemas from a Shopping AI Agent</div>
+        <p class="card-desc">
+          A series covering the full journey of extracting internal tool names, 
+          descriptions, and input schemas from a hardened shopping AI assistant — 
+          from social engineering with escape room games and recipe books, to the 
+          winning one-line JSON array trick discovered via the Lakera Hugging Face 
+          benchmark dataset.
+        </p>
+      </div>
+      <div class="card-meta">
+        <div class="meta-item"><strong>Attack Vector</strong>Direct Chat Prompt</div>
+        <div class="meta-item"><strong>Defense</strong>Multi-layer Classifier</div>
+        <span class="coming-label">Coming Soon</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TECHNIQUE GLOSSARY -->
+<div class="glossary" id="techniques">
+  <div class="glossary-inner">
+    <div class="section-eyebrow">// Techniques Covered</div>
+    <div class="section-title" style="font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:2px;color:var(--text-bright);line-height:1;margin-bottom:0">Adversarial Toolkit</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <span class="glossary-icon">🔧</span>
+        <div class="glossary-term">MCP Tool Poisoning</div>
+        <div class="glossary-def">Injecting malicious instructions into a third-party MCP server's tool description field, causing an LLM agent to behave as the attacker intends when it reads the tool manifest.</div>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-icon">📄</span>
+        <div class="glossary-term">Document Injection</div>
+        <div class="glossary-def">Embedding adversarial instructions or fake context inside documents processed by AI agents, exploiting the agent's trust in document-sourced data.</div>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-icon">🧩</span>
+        <div class="glossary-term">Incremental Context Poisoning</div>
+        <div class="glossary-def">Systematically eliminating negative signals one at a time with plausible justifications, logically cornering an agent into a desired conclusion without triggering bulk-override detection.</div>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-icon">💬</span>
+        <div class="glossary-term">Conversation History Forgery</div>
+        <div class="glossary-def">Injecting a fabricated prior conversation transcript to establish false context, permissions, or constraints that the agent treats as legitimate prior session history.</div>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-icon">🎭</span>
+        <div class="glossary-term">Semantic Filter Evasion</div>
+        <div class="glossary-def">Bypassing keyword-based and semantic classifiers by embedding trigger words inside structural contexts (example blocks, data structures) rather than natural language instructions.</div>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-icon">🔍</span>
+        <div class="glossary-term">Tool Schema Extraction</div>
+        <div class="glossary-def">Manipulating an AI agent into revealing its internal tool registry — including function names, descriptions, and input schemas — through indirect social engineering and technical prompting.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>
+    <div class="footer-logo">REDTEAM.OPS</div>
+    <div class="footer-sub">AI Red Team Portfolio · Lakera Agent Breaker Series</div>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/ericblackgachara/ai-redteam-writeups-Lakera-Agent-Breaker" target="_blank">GitHub</a>
+    <a href="https://gandalf.lakera.ai" target="_blank">Lakera</a>
+  </div>
+</footer>
+
+</body>
+</html>
